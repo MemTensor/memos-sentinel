@@ -1,0 +1,77 @@
+# MemOS Sentinel — Main Configuration
+
+service:
+  name: memos-sentinel
+  version: "0.1.0"
+  log_level: INFO
+
+# Target repository
+github:
+  target_repo: MemTensor/MemOS
+  webhook_path: /webhook/github
+
+# Agent behavior
+agent:
+  dry_run: true
+  max_steps:
+    fast: 2
+    light: 3
+    full: 10
+    dev: 15
+
+# Merge strategy
+merge:
+  method: squash          # squash | merge | rebase
+  auto_delete_branch: true
+  require_ci_pass: true
+  require_approval_count: 1
+  commit_message_format: "{pr_title} (#{pr_number})"
+  # Squash commit includes all individual commit messages
+
+# Base branch strategy
+branching:
+  default_base: main
+  dev_prefix: "autodev/sentinel-"
+  # For release regressions, target the release branch
+  release_branch_pattern: "release/v{version}"
+  # Hotfix branches for P0
+  hotfix_prefix: "hotfix/sentinel-"
+
+# Concurrency
+concurrency:
+  max_parallel_tasks: 3
+  lock_ttl_seconds: 300
+  # Prevent processing the same issue/PR simultaneously
+  dedup_window_seconds: 60
+
+# Error retry
+retry:
+  max_retries: 3
+  base_delay_seconds: 1.0
+  max_delay_seconds: 60.0
+  # CI-specific retry
+  ci_max_retries: 2
+  ci_poll_interval_seconds: 30
+  ci_timeout_seconds: 600
+
+# Duplicate detection
+duplicate_detection:
+  enabled: true
+  title_similarity_threshold: 0.75
+  body_similarity_threshold: 0.50
+  max_candidates: 5
+  # Skip detection for these label types
+  skip_labels: ["enhancement", "question"]
+
+# Stale management
+stale:
+  days_until_stale: 30
+  days_until_close: 7
+  exempt_labels: ["do not close", "ai-task", "ai-reviewing", "P0:critical", "P1:important"]
+
+# Notifications
+notify:
+  dingtalk:
+    enabled: true
+    # Notify on these events
+    events: [approval_needed, ci_passed, ci_failed, daily_report]

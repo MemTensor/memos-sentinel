@@ -1,0 +1,139 @@
+# MemOS Sentinel — Label System Definition
+# Simplified to 4 modules: plugin / memos / docs / infra
+
+type:
+  - name: bug
+    color: "d73a4a"
+    description: "Defect or broken behavior"
+    keywords: [bug, fix, crash, error, broken, fail, wrong, issue]
+
+  - name: enhancement
+    color: "a2eeef"
+    description: "New feature or improvement"
+    keywords: [feat, add, support, request, improve, enhance, new]
+
+  - name: documentation
+    color: "0075ca"
+    description: "Documentation only"
+    keywords: [doc, readme, typo, translate, wiki, guide]
+
+  - name: question
+    color: "d876e3"
+    description: "Question or discussion"
+    keywords: [how to, question, help, what is, why does]
+
+  - name: performance
+    color: "fbca04"
+    description: "Performance issue"
+    keywords: [slow, perf, timeout, latency, memory leak, oom]
+
+  - name: security
+    color: "b60205"
+    description: "Security vulnerability"
+    keywords: [security, vulnerability, cve, auth bypass, injection]
+
+  - name: regression
+    color: "e11d48"
+    description: "Regression from previous version"
+    keywords: [regression, broke, worked before, downgrade]
+
+  - name: duplicate
+    color: "cfd3d7"
+    description: "Duplicate issue"
+
+  - name: wontfix
+    color: "ffffff"
+    description: "Will not be fixed"
+
+module:
+  - name: "mod:plugin"
+    color: "c5def5"
+    description: "Plugin/adapter/bridge layer (local-plugin, hermes, openclaw, openwork, cloud)"
+    keywords: [plugin, bridge, viewer, install.sh, adapter, hermes, openclaw, openwork, electron, cloud plugin]
+    paths: ["apps/"]
+
+  - name: "mod:memos"
+    color: "bfd4f2"
+    description: "Core memos logic (memory, MCP, hub, scheduler, schema, database, evaluation)"
+    keywords: [memory, recall, scheduler, mcp, search_memory, hub, sharing, schema, model, interface, evaluation, benchmark, database, sqlite, neo4j, qdrant]
+    paths: ["src/memos/", "core/", "packages/", "evaluation/"]
+
+  - name: "mod:docs"
+    color: "0e8a16"
+    description: "Documentation"
+    keywords: [doc, readme, translate, wiki, guide, tutorial]
+    paths: ["docs/"]
+
+  - name: "mod:infra"
+    color: "f9d0c4"
+    description: "CI/CD, Docker, deployment, infrastructure"
+    keywords: [ci, docker, deploy, helm, github action, workflow, pipeline, build, release]
+    paths: [".github/", "docker/", "deploy/"]
+
+priority:
+  - name: "P0:critical"
+    color: "b60205"
+    description: "Blocking: data loss, security, crash"
+    rules:
+      - type: [regression, security]
+      - keywords: [crash, data loss, security breach]
+
+  - name: "P1:important"
+    color: "d93f0b"
+    description: "Core functionality affected, has workaround"
+    rules:
+      - type: [bug]
+        module: ["mod:plugin", "mod:memos"]
+
+  - name: "P2:normal"
+    color: "fbca04"
+    description: "Standard priority (default)"
+
+  - name: "P3:nice-to-have"
+    color: "c2e0c6"
+    description: "Low priority, cosmetic, docs"
+    rules:
+      - type: [documentation, question]
+
+status:
+  - name: needs-triage
+    color: "e4e669"
+    description: "New, awaiting classification (replaces 'pending')"
+
+  - name: needs-info
+    color: "d4c5f9"
+    description: "Missing information, waiting for author"
+
+  - name: needs-review
+    color: "fbca04"
+    description: "PR awaiting review"
+
+  - name: ai-task
+    color: "1d76db"
+    description: "Can be automatically handled by the agent"
+
+  - name: ai-reviewing
+    color: "0052cc"
+    description: "Agent is currently processing"
+
+  - name: stale
+    color: "ededed"
+    description: "No activity for 30+ days"
+
+  - name: do not close
+    color: "006b75"
+    description: "Protected from stale bot auto-close"
+
+# Migration map (old → new)
+migration:
+  rename:
+    "openclaw-local-plugin": "mod:plugin"
+    "[Interface]": "mod:memos"
+    "[Evaluation]": "mod:memos"
+    "[MemScheduler]": "mod:memos"
+    "[Database]": "mod:memos"
+    "[TreeTextualMemory]": "mod:memos"
+    "[BasicModules]": "mod:memos"
+
+  remove:
+    - pending  # 58 issues, meaningless

@@ -1,0 +1,71 @@
+# MemOS Repository Context — Provides Agent with structural understanding
+
+repository:
+  name: MemOS
+  org: MemTensor
+  description: "Memory Operating System — intelligent memory management with LLM integration"
+  default_branch: main
+  languages: [python, typescript, shell]
+
+structure:
+  apps:
+    memos-local-plugin:
+      description: "Local browser plugin with adapter layer"
+      tech: [typescript, vite]
+      subdirs:
+        - adapters/hermes/
+        - adapters/openclaw/
+    MemOS-Cloud-OpenClaw-Plugin:
+      description: "Cloud-hosted OpenClaw plugin"
+      tech: [typescript]
+    openwork-memos-integration:
+      description: "OpenWork Electron integration"
+      tech: [typescript, electron]
+
+  core:
+    hub:
+      description: "Hub for sharing and team features"
+      tech: [python]
+
+  src/memos:
+    description: "Core Python logic — memory, scheduler, recall"
+    tech: [python]
+    key_modules: [memory, scheduler, recall, mcp]
+
+  packages:
+    memos-schema:
+      description: "Shared TypeScript interfaces and models"
+      tech: [typescript]
+
+  evaluation:
+    description: "Evaluation framework and benchmarks"
+    tech: [python]
+
+  docs:
+    description: "Project documentation"
+
+  .github:
+    description: "CI/CD workflows and actions"
+
+# Module mapping (simplified 4-module system)
+module_mapping:
+  "mod:plugin":
+    - apps/memos-local-plugin/
+    - apps/MemOS-Cloud-OpenClaw-Plugin/
+    - apps/openwork-memos-integration/
+
+  "mod:memos":
+    - src/memos/
+    - core/
+    - packages/
+    - evaluation/
+
+  "mod:docs":
+    - docs/
+
+  "mod:infra":
+    - .github/
+    - docker/
+    - deploy/
+    - Dockerfile
+    - docker-compose.yml
