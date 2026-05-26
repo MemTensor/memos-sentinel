@@ -95,6 +95,12 @@ async def run_dev_agent_for_issue(issue_number: int) -> dict:
     ))
 
     await notify_pr_ready(issue_number, pr_number, title)
+
+    # Start CI monitoring in background
+    import asyncio
+    from src.agent.ci_monitor import run_ci_with_retry
+    asyncio.create_task(run_ci_with_retry(issue_number, pr_number))
+
     return {"action": "pr_created", "pr_number": pr_number}
 
 
