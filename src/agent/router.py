@@ -23,19 +23,24 @@ async def dispatch_event(event: dict) -> dict:
 
         match complexity:
             case "fast":
-                return await _handle_fast(event)
+                result = await _handle_fast(event)
             case "classify":
-                return await _handle_new_issue(event)
+                result = await _handle_new_issue(event)
             case "pr_review":
-                return await _handle_pr(event)
+                result = await _handle_pr(event)
             case "dev":
-                return await _handle_ai_task(event)
+                result = await _handle_ai_task(event)
             case "ignore":
-                return {"summary": "ignored"}
+                result = {"summary": "ignored"}
             case _:
-                return {"summary": f"unhandled: {complexity}"}
+                result = {"summary": f"unhandled: {complexity}"}
+
+        # Write audit log
+        await _write_audit(event, result)
+        return result
     except Exception as e:
         logger.error(f"Error processing event: {e}", exc_info=True)
+        await _notify_error(event, e)
         return {"summary": f"error: {e}"}
     finally:
         if lock_key:
@@ -174,3 +179,50 @@ def _compute_lock_key(event: dict) -> str | None:
         return None
 
     return f"{event_type}:{number}"
+
+
+async def _write_audit(event: dict, result: dict) -> None:
+    """Write an audit log entry for the processed event."""
+    try:
+        from src.store.db import get_session
+        from src.store.models import AuditLog
+
+        payload = event.get("payload", {})
+        number = None
+        for key in ("issue", "pull_request"):
+            if key in payload:
+                number = payload[key].get("number")
+                break
+
+        async with get_session() as session:
+            log = AuditLog(
+                event_type=event.get("type", ""),
+                event_action=event.get("action", ""),
+                target_number=number,
+                result_summary=result.get("summary", "")[:500],
+            )
+            session.add(log)
+            await session.commit()
+    except Exception as e:
+        logger.warning(f"Failed to write audit log: {e}")
+
+
+async def _notify_error(event: dict, error: Exception) -> None:
+    """Send DingTalk alert when agent encounters an unhandled error."""
+    try:
+        from src.notify.dingtalk import send_notification
+
+        event_type = event.get("type", "?")
+        action = event.get("action", "?")
+        payload = event.get("payload", {})
+        number = ""
+        for key in ("issue", "pull_request"):
+            if key in payload:
+                number = f" #{payload[key].get('number', '')}"
+                break
+
+        await send_notification(
+            f"ERROR processing {event_type}.{action}{number}: {str(error)[:200]}"
+        )
+    except Exception:
+        pass
