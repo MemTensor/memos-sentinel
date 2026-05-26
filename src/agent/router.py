@@ -1,10 +1,10 @@
-"""Router — classifies event complexity and dispatches to appropriate handler."""
+"""Router — classifies events, dispatches to handlers, with full enhancement suite."""
 
 from __future__ import annotations
 
 import logging
 
-from src.agent.state import AgentState, get_settings
+from src.agent.state import get_settings
 from src.agent.concurrency import acquire_lock, release_lock
 
 logger = logging.getLogger(__name__)
@@ -30,12 +30,13 @@ async def dispatch_event(event: dict) -> dict:
                 result = await _handle_pr(event)
             case "dev":
                 result = await _handle_ai_task(event)
+            case "pr_merged":
+                result = await _handle_pr_merged(event)
             case "ignore":
                 result = {"summary": "ignored"}
             case _:
                 result = {"summary": f"unhandled: {complexity}"}
 
-        # Write audit log
         await _write_audit(event, result)
         return result
     except Exception as e:
@@ -53,42 +54,37 @@ def classify_complexity(event: dict) -> str:
     action = event.get("action", "")
     payload = event.get("payload", {})
 
-    # ai-task label added → dev path
     if event_type == "issues" and action == "labeled":
         label_name = payload.get("label", {}).get("name", "")
         if label_name == "ai-task":
             return "dev"
 
-    # New issue → classify and label
     if event_type == "issues" and action == "opened":
         return "classify"
 
-    # PR opened or updated → review
     if event_type == "pull_request" and action in ("opened", "synchronize"):
         return "pr_review"
 
-    # Issue closed/deleted → fast (no-op for now)
-    if event_type == "issues" and action in ("closed", "deleted"):
-        return "fast"
+    if event_type == "pull_request" and action == "closed":
+        if payload.get("pull_request", {}).get("merged"):
+            return "pr_merged"
 
-    # Ping event
-    if event_type == "ping":
+    if event_type in ("ping",) or (event_type == "issues" and action in ("closed", "deleted")):
         return "fast"
 
     return "ignore"
 
 
 async def _handle_fast(event: dict) -> dict:
-    """Handle simple events that don't need processing."""
     return {"summary": "fast: acknowledged"}
 
 
 async def _handle_new_issue(event: dict) -> dict:
-    """Handle new issue: classify → label → decide ai-task or notify human."""
+    """Full new issue pipeline: dedup → classify → template check → ai-task/notify."""
     from src.labels.classifier import _classify_type, _classify_module, _classify_priority, _llm_classify
-    from src.tools.github_write import add_labels
+    from src.tools.github_write import add_labels, post_comment
     from src.agent.notify_handler import notify_needs_human
-    from src.phase1 import _llm_ai_task_judge
+    from src.agent.duplicate_detector import find_duplicates
 
     payload = event.get("payload", {})
     issue = payload.get("issue", {})
@@ -97,11 +93,23 @@ async def _handle_new_issue(event: dict) -> dict:
     body = issue.get("body", "") or ""
     text = f"{title} {body}".lower()
 
-    # Classify
+    # Step 1: Duplicate detection
+    duplicates = await find_duplicates(issue)
+    if duplicates:
+        refs = ", ".join(f"#{n}" for n in duplicates[:3])
+        await post_comment(number, (
+            f"This issue may be a duplicate of {refs}.\n\n"
+            "If your issue is different, please clarify what distinguishes it.\n\n"
+            "---\n*Detected by [memos-sentinel](https://github.com/MemTensor/memos-sentinel)*"
+        ))
+        await add_labels(number, ["duplicate"])
+        return {"summary": f"#{number} marked as potential duplicate of {refs}"}
+
+    # Step 2: Classify (rule-based)
     type_label = _classify_type(text)
     module_label = _classify_module(text)
 
-    # LLM fallback
+    # Step 3: LLM fallback only if rules fail
     if not type_label or not module_label:
         llm_labels = await _llm_classify(issue, missing_type=not type_label, missing_module=not module_label)
         for l in llm_labels:
@@ -112,13 +120,49 @@ async def _handle_new_issue(event: dict) -> dict:
 
     priority_label = _classify_priority(text, type_label, module_label)
 
-    # Apply module label
+    # Step 4: Template check (bug without repro → ask for info)
+    if type_label == "bug" and len(body) < 80:
+        await post_comment(number, (
+            "Thanks for reporting this bug! To help us investigate, please provide:\n\n"
+            "1. **Steps to reproduce**\n"
+            "2. **Expected vs actual behavior**\n"
+            "3. **Environment** (OS, Python/Node version, MemOS version)\n"
+            "4. **Error logs** (if any)\n\n"
+            "Adding `needs-info` label until we have more details.\n\n"
+            "---\n*Managed by [memos-sentinel](https://github.com/MemTensor/memos-sentinel)*"
+        ))
+        labels_to_add = ["needs-info"]
+        if module_label:
+            labels_to_add.append(module_label)
+        await add_labels(number, labels_to_add)
+        return {"summary": f"#{number} needs-info (bug without details)"}
+
+    # Step 5: Auto-reply for questions
+    if type_label == "question":
+        await post_comment(number, (
+            f"Thanks for your question!\n\n"
+            "A maintainer will review this. In the meantime, you might find relevant info in:\n"
+            "- [MemOS Docs](https://github.com/MemTensor/MemOS/tree/main/docs)\n"
+            "- [MemOS Examples](https://github.com/MemTensor/MemOS/tree/main/examples)\n\n"
+            "---\n*Managed by [memos-sentinel](https://github.com/MemTensor/memos-sentinel)*"
+        ))
+        labels_to_add = ["question"]
+        if module_label:
+            labels_to_add.append(module_label)
+        await add_labels(number, labels_to_add)
+        await notify_needs_human(number, title, module_label, priority_label, "question")
+        return {"summary": f"#{number} question auto-replied + notified human"}
+
+    # Step 6: ai-task decision (rule pre-filter before LLM)
     labels_to_add = []
     if module_label:
         labels_to_add.append(module_label)
 
-    # Decide: ai-task or notify human
-    can_ai_fix = await _llm_ai_task_judge(issue)
+    can_ai_fix = _rule_ai_task_prefilter(type_label, body)
+    if can_ai_fix is None:
+        # Borderline → ask LLM
+        from src.phase1 import _llm_ai_task_judge
+        can_ai_fix = await _llm_ai_task_judge(issue)
 
     if can_ai_fix:
         labels_to_add.append("ai-task")
@@ -135,14 +179,58 @@ async def _handle_new_issue(event: dict) -> dict:
     }
 
 
+def _rule_ai_task_prefilter(type_label: str | None, body: str) -> bool | None:
+    """Rule-based fast accept/reject for ai-task. Returns None if uncertain.
+
+    This avoids calling LLM for obvious cases.
+    """
+    # Hard NO
+    if type_label in ("question", "performance", "enhancement"):
+        return False
+
+    # Hard YES
+    if type_label == "documentation":
+        return True
+    if type_label == "regression":
+        return True
+
+    # Bug: check body quality
+    if type_label == "bug":
+        if len(body) < 50:
+            return False
+        if any(s in body.lower() for s in ("```", "traceback", "error:", "exception")):
+            return None  # Promising, let LLM confirm
+        if len(body) > 300:
+            return None  # Detailed enough, let LLM decide
+        return False  # Short bug without code/error → no
+
+    return None  # Uncertain → LLM
+
+
 async def _handle_pr(event: dict) -> dict:
-    """Handle new/updated PR: review with Opus."""
+    """Handle new/updated PR: label + review."""
     from src.agent.full_agent import review_pr
+    from src.tools.github_write import add_labels
+    from src.labels.classifier import _classify_module
 
     payload = event.get("payload", {})
     pr = payload.get("pull_request", {})
     number = pr.get("number")
+    title = pr.get("title", "")
 
+    # Auto-label PR by changed files
+    files = [f.get("filename", "") for f in pr.get("files", [])] if "files" in pr else []
+    if not files:
+        # Fetch files from title/body heuristic
+        text = f"{title} {pr.get('body', '')}".lower()
+        module = _classify_module(text)
+        if module:
+            try:
+                await add_labels(number, [module])
+            except Exception:
+                pass
+
+    # Review
     result = await review_pr(number)
     return {"summary": f"reviewed PR #{number}", **result}
 
@@ -155,7 +243,6 @@ async def _handle_ai_task(event: dict) -> dict:
     issue = payload.get("issue", {})
     number = issue.get("number")
 
-    # Don't process if already ai-reviewing
     current_labels = [l["name"] for l in issue.get("labels", [])]
     if "ai-reviewing" in current_labels:
         return {"summary": f"#{number} already being processed"}
@@ -164,25 +251,44 @@ async def _handle_ai_task(event: dict) -> dict:
     return {"summary": f"dev-agent processed #{number}", **result}
 
 
+async def _handle_pr_merged(event: dict) -> dict:
+    """Handle merged PR: close linked issue + track for release notes."""
+    payload = event.get("payload", {})
+    pr = payload.get("pull_request", {})
+    pr_number = pr.get("number")
+    pr_body = pr.get("body", "") or ""
+    pr_title = pr.get("title", "")
+
+    # Find linked issue from PR body (Closes #xxx, Fixes #xxx)
+    import re
+    linked_issues = re.findall(r"(?:closes|fixes|resolves)\s+#(\d+)", pr_body.lower())
+
+    # Also check PR title
+    title_issues = re.findall(r"\(#(\d+)\)", pr_title)
+
+    all_linked = list(set(linked_issues + title_issues))
+
+    return {
+        "summary": f"PR #{pr_number} merged, linked issues: {all_linked}",
+        "linked_issues": all_linked,
+        "pr_title": pr_title,
+    }
+
+
 def _compute_lock_key(event: dict) -> str | None:
-    """Generate a unique lock key to prevent duplicate processing."""
     event_type = event.get("type", "")
     payload = event.get("payload", {})
-
     number = None
     for key in ("issue", "pull_request"):
         if key in payload:
             number = payload[key].get("number")
             break
-
     if number is None:
         return None
-
     return f"{event_type}:{number}"
 
 
 async def _write_audit(event: dict, result: dict) -> None:
-    """Write an audit log entry for the processed event."""
     try:
         from src.store.db import get_session
         from src.store.models import AuditLog
@@ -208,10 +314,8 @@ async def _write_audit(event: dict, result: dict) -> None:
 
 
 async def _notify_error(event: dict, error: Exception) -> None:
-    """Send DingTalk alert when agent encounters an unhandled error."""
     try:
         from src.notify.dingtalk import send_notification
-
         event_type = event.get("type", "?")
         action = event.get("action", "?")
         payload = event.get("payload", {})
@@ -220,9 +324,8 @@ async def _notify_error(event: dict, error: Exception) -> None:
             if key in payload:
                 number = f" #{payload[key].get('number', '')}"
                 break
-
         await send_notification(
-            f"ERROR processing {event_type}.{action}{number}: {str(error)[:200]}"
+            f"ERROR {event_type}.{action}{number}: {str(error)[:200]}"
         )
     except Exception:
         pass

@@ -75,7 +75,20 @@ async def run_dev_agent_for_issue(issue_number: int) -> dict:
         await remove_labels(issue_number, ["ai-reviewing"])
         return {"action": "no_fix_generated"}
 
-    # Step 5: Create branch and PR via GitHub API
+    # Step 5: Self-reflection — review our own patch before submitting
+    reflection = await _self_reflect(model, title, body, fix, code_context)
+    if not reflection.get("approved"):
+        await post_comment(issue_number, (
+            "## Sentinel Analysis\n\n"
+            "I generated a potential fix but my self-review flagged quality concerns:\n\n"
+            f"> {reflection.get('reason', 'Low confidence in correctness')}\n\n"
+            "This issue needs human attention.\n\n"
+            "---\n*Analyzed by [memos-sentinel](https://github.com/MemTensor/memos-sentinel)*"
+        ))
+        await remove_labels(issue_number, ["ai-reviewing"])
+        return {"action": "self_reflection_rejected", "reason": reflection.get("reason")}
+
+    # Step 6: Create branch and PR via GitHub API
     branch_name = f"{settings.dev_branch_prefix}{issue_number}"
     pr_result = await _create_fix_pr(issue_number, branch_name, fix, title, body, analysis)
 
@@ -290,3 +303,54 @@ async def _create_fix_pr(
 
         except Exception as e:
             return {"error": str(e)}
+
+
+async def _self_reflect(model, title: str, body: str, fix: dict, code_context: dict) -> dict:
+    """Self-reflection: review our own patch for quality before submitting.
+
+    Uses Haiku (cheap) to quickly verify the patch makes sense.
+    """
+    import json
+
+    from src.llm.client import get_light_model
+    reviewer = get_light_model()
+
+    changes_desc = "\n".join(
+        f"- `{c['path']}`: {len(c.get('content', ''))} chars"
+        for c in fix.get("changes", [])
+    )
+    sample_content = ""
+    for c in fix.get("changes", [])[:2]:
+        sample_content += f"\n### {c['path']}\n```\n{c.get('content', '')[:2000]}\n```\n"
+
+    prompt = f"""Review this AI-generated code patch. Does it look correct and safe to submit as a PR?
+
+## Issue Being Fixed
+Title: {title}
+Body: {body[:1000]}
+
+## Proposed Changes
+{changes_desc}
+
+{sample_content}
+
+## Criteria
+1. Does the fix address the issue described?
+2. Does it introduce obvious bugs or regressions?
+3. Is the change scope reasonable (not too large, not trivially wrong)?
+4. Would this pass basic code review?
+
+Respond with JSON:
+{{"approved": true/false, "reason": "brief explanation"}}"""
+
+    try:
+        response = await reviewer.ainvoke(prompt)
+        content = response.content
+        if "{" in content:
+            json_str = content[content.index("{"):content.rindex("}") + 1]
+            return json.loads(json_str)
+    except Exception as e:
+        logger.warning(f"Self-reflection failed: {e}")
+
+    # If reflection fails, default to approved (don't block on reflection errors)
+    return {"approved": True, "reason": "reflection unavailable, proceeding"}

@@ -31,7 +31,16 @@ async def on_startup():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "memos-sentinel", "version": "0.2.0"}
+    from src.tools.github_client import get_rate_limit_status
+
+    rl = get_rate_limit_status()
+    return {
+        "status": "ok",
+        "service": "memos-sentinel",
+        "version": "0.3.0",
+        "github_rate_limit_remaining": rl["remaining"],
+        "github_rate_limit_resets_in": rl["resets_in"],
+    }
 
 
 @app.exception_handler(Exception)
