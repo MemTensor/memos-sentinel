@@ -1,4 +1,4 @@
-"""Dual-model LLM client — light model for routing + heavy model for deep tasks."""
+"""Dual-model LLM client — OpenAI-compatible relay to internal API."""
 
 from __future__ import annotations
 
@@ -12,17 +12,17 @@ logger = logging.getLogger(__name__)
 
 @lru_cache
 def get_light_model():
-    """Get the lightweight model for routing, classification, and simple replies.
+    """Lightweight model for routing, classification, ai-task judgment.
 
-    Used for: Router, label classification, quick replies
-    Suggested: Claude 3.5 Haiku or similar fast model
+    Model: Claude Haiku 4.5 (via OpenAI-compatible relay)
     """
     settings = get_settings()
-    from langchain_anthropic import ChatAnthropic
+    from langchain_openai import ChatOpenAI
 
-    return ChatAnthropic(
-        model="claude-sonnet-4-20250514",
-        api_key=settings.anthropic_api_key,
+    return ChatOpenAI(
+        model=settings.light_model,
+        base_url=settings.openai_base_url,
+        api_key=settings.openai_api_key,
         max_tokens=2048,
         temperature=0,
     )
@@ -30,17 +30,17 @@ def get_light_model():
 
 @lru_cache
 def get_heavy_model():
-    """Get the heavy model for deep review, code analysis, and code generation.
+    """Heavy model for PR review, code analysis, code generation.
 
-    Used for: PR review, bug analysis, code fixes
-    Model: Claude Opus 4.6
+    Model: Claude Opus 4.6 (via OpenAI-compatible relay)
     """
     settings = get_settings()
-    from langchain_anthropic import ChatAnthropic
+    from langchain_openai import ChatOpenAI
 
-    return ChatAnthropic(
-        model="claude-opus-4-20250514",
-        api_key=settings.anthropic_api_key,
+    return ChatOpenAI(
+        model=settings.heavy_model,
+        base_url=settings.openai_base_url,
+        api_key=settings.openai_api_key,
         max_tokens=8192,
-        temperature=0,
+        temperature=0.2,
     )

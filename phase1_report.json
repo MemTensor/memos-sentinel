@@ -1,0 +1,1652 @@
+{
+  "summary": {
+    "total": 100,
+    "by_module": {
+      "plugin": 63,
+      "memos": 37,
+      "unknown": 0
+    },
+    "by_type": {
+      "documentation": 11,
+      "question": 14,
+      "performance": 11,
+      "enhancement": 44,
+      "bug": 15,
+      "regression": 4,
+      "security": 1
+    },
+    "ai_task_count": 30,
+    "ai_task_issues": [
+      1802,
+      1790,
+      1787,
+      1785,
+      1782,
+      1781,
+      1746,
+      1734,
+      1695,
+      1694,
+      1693,
+      1692,
+      1691,
+      1681,
+      1639,
+      1619,
+      1612,
+      1593,
+      1540,
+      1532,
+      1527,
+      1525,
+      1523,
+      1520,
+      1518,
+      1489,
+      1469,
+      1423,
+      1421,
+      1398
+    ]
+  },
+  "details": [
+    {
+      "number": 1802,
+      "title": "test: AutoDev PR assignment smoke test",
+      "current_labels": [
+        "ai-task"
+      ],
+      "classified": {
+        "type": "documentation",
+        "module": "plugin",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "plugin",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1798,
+      "title": "bridge: core.shutdown() hangs indefinitely when gateway dies abnormally (orphaned bridge)",
+      "current_labels": [],
+      "classified": {
+        "type": "question",
+        "module": "plugin",
+        "priority": "P0:critical"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1797,
+      "title": "bug(hermes): _bridge_ok cache permanently disables provider after transient startup failure",
+      "current_labels": [],
+      "classified": {
+        "type": "performance",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1792,
+      "title": "refactor: remove dead `remove_prompt_example` branch in `StrategyStructMemReader`",
+      "current_labels": [],
+      "classified": {
+        "type": "enhancement",
+        "module": "memos",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1790,
+      "title": "fix: `log_working_memory_replacement` reports incorrect memory_len (delta instead of total)",
+      "current_labels": [],
+      "classified": {
+        "type": "bug",
+        "module": "memos",
+        "priority": "P2:normal"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "memos",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1787,
+      "title": "v2.0.2+ regression: bootstrapMemoryCoreFull() hangs with 100% CPU on databases >500MB",
+      "current_labels": [],
+      "classified": {
+        "type": "regression",
+        "module": "plugin",
+        "priority": "P0:critical"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "plugin",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1785,
+      "title": "test: AutoDev Agent E2E verification round 2",
+      "current_labels": [
+        "ai-task"
+      ],
+      "classified": {
+        "type": "regression",
+        "module": "memos",
+        "priority": "P0:critical"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "memos",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1782,
+      "title": "Reward pipeline skips abandoned episodes — 98% of closed episodes never scored",
+      "current_labels": [],
+      "classified": {
+        "type": "bug",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "plugin",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1781,
+      "title": "fix: AutoDev webhook smoke test",
+      "current_labels": [
+        "ai-task"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "memos",
+        "priority": "P2:normal"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "memos",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1778,
+      "title": "fix: Openclaw启动时memos-local-plugin插件概率性不启动",
+      "current_labels": [
+        "bug",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1776,
+      "title": "Startup blocked for ~100s by synchronous orphan episode recovery + LLM timeout cascade",
+      "current_labels": [],
+      "classified": {
+        "type": "question",
+        "module": "plugin",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1775,
+      "title": "LLM provider 400 errors from SiliconFlow + missing response body logging (memos-local-plugin)",
+      "current_labels": [],
+      "classified": {
+        "type": "performance",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1769,
+      "title": "fix: dont create  skill everytime",
+      "current_labels": [
+        "bug",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "memos",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1763,
+      "title": "feat: 添加harness工程规范",
+      "current_labels": [
+        "enhancement",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "memos",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1755,
+      "title": "memos-local-plugin: large merged episodes can trigger L2/L3/skill-evolution storm and stall OpenClaw sessions",
+      "current_labels": [],
+      "classified": {
+        "type": "question",
+        "module": "plugin",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1747,
+      "title": "bridge.cts 启动竞态: startStdioServer 应在 core.init 之前启动",
+      "current_labels": [],
+      "classified": {
+        "type": "performance",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1746,
+      "title": "bug: embedding maintenance stats misleading after bulk import — skipped traces still counted as missing vectors",
+      "current_labels": [],
+      "classified": {
+        "type": "bug",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "plugin",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1744,
+      "title": "fix: Hermes provider symlink breaks after upgrade and bridge health can timeout during startup recovery",
+      "current_labels": [],
+      "classified": {
+        "type": "performance",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1736,
+      "title": "[Bug] memos-local-hermes-plugin: bridge fails to start on Node.js v22 (CJS/ESM module resolution error)",
+      "current_labels": [],
+      "classified": {
+        "type": "performance",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1734,
+      "title": "[Bug] better-sqlite3 native module ABI mismatch breaks plugin on Node 25",
+      "current_labels": [],
+      "classified": {
+        "type": "documentation",
+        "module": "plugin",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "plugin",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1733,
+      "title": "[Bug] @memtensor/memos-lite-openclaw-plugin v0.2.3 fails to load: ReferenceError: exports is not defined in ES module scope",
+      "current_labels": [],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1722,
+      "title": "fix: memory_search returned error",
+      "current_labels": [
+        "bug",
+        "pending"
+      ],
+      "classified": {
+        "type": "performance",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1718,
+      "title": "fix: 官方MCP服务器中memos-mcp-search_memory工具 filter 为空则调用失败",
+      "current_labels": [
+        "bug",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "memos",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1705,
+      "title": "Improve responsibility-aware routing in CompositeCubeView",
+      "current_labels": [
+        "enhancement",
+        "help wanted",
+        "[Interface]"
+      ],
+      "classified": {
+        "type": "question",
+        "module": "memos",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1704,
+      "title": "[Discussion] How should Dream memories decay, be archived, or be used by agents?",
+      "current_labels": [
+        "enhancement",
+        "help wanted",
+        "question"
+      ],
+      "classified": {
+        "type": "question",
+        "module": "memos",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1703,
+      "title": "[Discussion] How should Dream diaries be surfaced to users? Lessons from OpenClaw diary UX",
+      "current_labels": [
+        "enhancement",
+        "help wanted",
+        "question"
+      ],
+      "classified": {
+        "type": "question",
+        "module": "plugin",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1702,
+      "title": "[Discussion] What should trigger Dream CE?",
+      "current_labels": [
+        "enhancement",
+        "help wanted",
+        "question"
+      ],
+      "classified": {
+        "type": "question",
+        "module": "memos",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1701,
+      "title": "[Discussion] Dream CE architecture review: feedback wanted on the current design",
+      "current_labels": [
+        "enhancement",
+        "help wanted",
+        "question"
+      ],
+      "classified": {
+        "type": "question",
+        "module": "plugin",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1700,
+      "title": "[Discussion] Does a memory system need dreaming? Where should we draw the line between reasoning and summarization?",
+      "current_labels": [
+        "enhancement",
+        "help wanted",
+        "question"
+      ],
+      "classified": {
+        "type": "question",
+        "module": "memos",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1699,
+      "title": "Improve API product model field descriptions",
+      "current_labels": [
+        "documentation",
+        "good first issue",
+        "[Interface]"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "memos",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1695,
+      "title": "Translate setup, scheduler, tools, and error API docs to English",
+      "current_labels": [
+        "documentation",
+        "good first issue"
+      ],
+      "classified": {
+        "type": "documentation",
+        "module": "memos",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "memos",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1694,
+      "title": "Translate chat and message API docs to English",
+      "current_labels": [
+        "documentation",
+        "good first issue"
+      ],
+      "classified": {
+        "type": "documentation",
+        "module": "memos",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "memos",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1693,
+      "title": "Translate core API docs to English",
+      "current_labels": [
+        "documentation",
+        "good first issue"
+      ],
+      "classified": {
+        "type": "documentation",
+        "module": "memos",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "memos",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1692,
+      "title": "Translate evaluation docs to Chinese",
+      "current_labels": [
+        "documentation",
+        "good first issue"
+      ],
+      "classified": {
+        "type": "documentation",
+        "module": "memos",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "memos",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1691,
+      "title": "Translate module docs to Chinese",
+      "current_labels": [
+        "documentation",
+        "good first issue"
+      ],
+      "classified": {
+        "type": "documentation",
+        "module": "memos",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "memos",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1681,
+      "title": "feat: expose cube creation in HTTP API + clarify mem_cube_id semantics",
+      "current_labels": [],
+      "classified": {
+        "type": "documentation",
+        "module": "plugin",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "plugin",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1680,
+      "title": "feat: Add official Claude Code plugin / MCP integration for MemOS",
+      "current_labels": [
+        "enhancement",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1679,
+      "title": "fix: The timed_with_status method was swallowing exceptions, making debugging difficult",
+      "current_labels": [
+        "bug",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "memos",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1675,
+      "title": "fix: memos-local-openclaw-plugin@1.0.10 打包缺少 dist/ 目錄，無法在 OpenClaw 2026.5.x 使用",
+      "current_labels": [
+        "bug",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1668,
+      "title": "bug(memos-local-plugin): L3 abstraction rejects salvageable structured outputs too aggressively",
+      "current_labels": [],
+      "classified": {
+        "type": "performance",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1639,
+      "title": "[memos-local-openclaw] Memory Viewer (port 18799) not starting on Node 24",
+      "current_labels": [],
+      "classified": {
+        "type": "regression",
+        "module": "plugin",
+        "priority": "P0:critical"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "plugin",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1620,
+      "title": "429 retry handling ignores Retry-After header in LLM and embedding fetchers",
+      "current_labels": [],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1619,
+      "title": "Bug: npm package ships TypeScript source only — no compiled output (dist/)",
+      "current_labels": [],
+      "classified": {
+        "type": "bug",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "plugin",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1617,
+      "title": "Feature Request: Qdrant vector backend for MemOS Local Plugin",
+      "current_labels": [],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P0:critical"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1616,
+      "title": "[Feedback] memos-local TS source not compiled — write/share tools unavailable",
+      "current_labels": [],
+      "classified": {
+        "type": "question",
+        "module": "plugin",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1612,
+      "title": "[Bug] memos-local-openclaw-plugin: ctx.registerTools() never called in QClaw desktop app context",
+      "current_labels": [],
+      "classified": {
+        "type": "bug",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "plugin",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1611,
+      "title": "classifyTopic fails when summarizer uses Anthropic endpoint (Kimi Code)",
+      "current_labels": [],
+      "classified": {
+        "type": "performance",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1596,
+      "title": "fix: System overview doesn't show the correct configuration value for model",
+      "current_labels": [
+        "bug",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "memos",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1595,
+      "title": "FTS5 query failures with Hermes Agent instructional prompts",
+      "current_labels": [],
+      "classified": {
+        "type": "performance",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1593,
+      "title": "Web UI memory count stuck at 500, actual traces exceed 1400",
+      "current_labels": [],
+      "classified": {
+        "type": "bug",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "plugin",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1591,
+      "title": "Advanced tools (memory_share, memory_write_public, etc.) not exposed to agent on OpenClaw 4.26",
+      "current_labels": [],
+      "classified": {
+        "type": "bug",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1559,
+      "title": "fix: registerMemoryCapability API not found in OpenClaw 2026.3.31",
+      "current_labels": [
+        "bug",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1545,
+      "title": "fix: npm install -g @memtensor/memos-local-plugin安装报错",
+      "current_labels": [
+        "bug",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1544,
+      "title": "feat: Support localhost dashboard for deploying MemOS locally",
+      "current_labels": [
+        "enhancement",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "memos",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1543,
+      "title": "fix: MEMOS不支持JSON5格式的openclaw.json",
+      "current_labels": [
+        "bug",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1540,
+      "title": "fix:",
+      "current_labels": [
+        "bug",
+        "pending"
+      ],
+      "classified": {
+        "type": "documentation",
+        "module": "plugin",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "plugin",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1532,
+      "title": "Agent incorrectly acts on cross-session memory context in new sessions",
+      "current_labels": [],
+      "classified": {
+        "type": "bug",
+        "module": "plugin",
+        "priority": "P0:critical"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "plugin",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1527,
+      "title": "[Bug] suggestion_handler sends system-only message — fails on MiniMax & Anthropic LLMs",
+      "current_labels": [],
+      "classified": {
+        "type": "bug",
+        "module": "plugin",
+        "priority": "P0:critical"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "plugin",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1525,
+      "title": "[Bug] clean_json_response crashes with cryptic AttributeError when given None",
+      "current_labels": [],
+      "classified": {
+        "type": "bug",
+        "module": "memos",
+        "priority": "P0:critical"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "memos",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1523,
+      "title": "[Bug] timed_with_status decorator silently swallows exceptions and returns None",
+      "current_labels": [],
+      "classified": {
+        "type": "bug",
+        "module": "memos",
+        "priority": "P0:critical"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "memos",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1520,
+      "title": "Docker deployment: daemon loses embedding/LLM config when started outside Python adapter",
+      "current_labels": [],
+      "classified": {
+        "type": "documentation",
+        "module": "plugin",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "plugin",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1518,
+      "title": "(capture) Internal \"Review the conversation above\" prompts stored as user chunks — memory DB noise",
+      "current_labels": [],
+      "classified": {
+        "type": "bug",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "plugin",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1514,
+      "title": "Auto-recall hardcodes maxResults: 10, ignoring recall.maxResultsDefault config",
+      "current_labels": [],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1508,
+      "title": "feat: 我们需要上传自己skill的功能",
+      "current_labels": [
+        "enhancement",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "memos",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1505,
+      "title": "接口文档内容不一致",
+      "current_labels": [
+        "bug",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "memos",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1495,
+      "title": "Feature Request: Support Dreaming-style MEMORY.md Promotion Pipeline",
+      "current_labels": [],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1493,
+      "title": "fix: /product/add returns 200 success but stores no memory (No add/update items prepared)",
+      "current_labels": [
+        "bug",
+        "pending"
+      ],
+      "classified": {
+        "type": "question",
+        "module": "memos",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1490,
+      "title": "fix: 本地viewer不会解析配置文件的环境变量",
+      "current_labels": [
+        "bug",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1489,
+      "title": "fix(openclaw): incorrect Alibaba Bailian endpoint default in Viewer UI",
+      "current_labels": [],
+      "classified": {
+        "type": "bug",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "plugin",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1482,
+      "title": "fix: Extracting too many missing_documents embeddings cause embedder error",
+      "current_labels": [
+        "bug",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "memos",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1474,
+      "title": "feat: memos-local-openclaw-plugin的记忆数据能否增加导出功能",
+      "current_labels": [
+        "enhancement",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1472,
+      "title": "Feature Request: Hermes Agent MCP Plugin",
+      "current_labels": [],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1470,
+      "title": "[Performance] Brute-force vector search too slow; Task aggregation not utilized",
+      "current_labels": [],
+      "classified": {
+        "type": "performance",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1469,
+      "title": "[Bug修复] Neo4j社区版update_node未同步Qdrant + schedule依赖缺失导致Thread-3启动失败",
+      "current_labels": [],
+      "classified": {
+        "type": "bug",
+        "module": "memos",
+        "priority": "P2:normal"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "memos",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1467,
+      "title": "[Feature Request] Chrome 插件支持网页内容和书签同步到 MemOS 知识库",
+      "current_labels": [],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1452,
+      "title": "auto-recall can block gateway startup / first-turn path long enough to fail health checks",
+      "current_labels": [],
+      "classified": {
+        "type": "performance",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1448,
+      "title": "fix: 添加包含偏好信息的记忆后，使用搜索接口POST /product/search无法检索到任何记忆",
+      "current_labels": [
+        "bug",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "memos",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1440,
+      "title": "feat: 咱们的MemOS插件挺好用的，能不能支持一下copaw的安装",
+      "current_labels": [
+        "enhancement",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1438,
+      "title": "fix: optimize dispatch task && update log level",
+      "current_labels": [
+        "bug",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "memos",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1433,
+      "title": "feat: 希望openclaw插件新增对自托管部署的MemOS的api支持",
+      "current_labels": [
+        "enhancement",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1427,
+      "title": "feat: MemOS 插件与 Dream 系统兼容性问题",
+      "current_labels": [
+        "enhancement",
+        "pending",
+        "openclaw-local-plugin"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1423,
+      "title": "[Enhancement] Skill generation template does not follow skill-creator best practices",
+      "current_labels": [
+        "openclaw-local-plugin"
+      ],
+      "classified": {
+        "type": "documentation",
+        "module": "memos",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "memos",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1421,
+      "title": "Support input_type for asymmetric embeddings in built-in memorySearch",
+      "current_labels": [],
+      "classified": {
+        "type": "regression",
+        "module": "plugin",
+        "priority": "P0:critical"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "plugin",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1418,
+      "title": "fix: OpenClaw 2026.4.2 无法正常启动 memOS",
+      "current_labels": [
+        "bug",
+        "pending",
+        "openclaw-local-plugin"
+      ],
+      "classified": {
+        "type": "security",
+        "module": "plugin",
+        "priority": "P0:critical"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1417,
+      "title": "fix: mem reader删除fast节点问题",
+      "current_labels": [
+        "bug",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "memos",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1415,
+      "title": "feat: 建议local插件加一下性能监控",
+      "current_labels": [
+        "enhancement",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "memos",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1411,
+      "title": "fix: simple_struct记忆添加问题，需要排查",
+      "current_labels": [
+        "bug",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "memos",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1410,
+      "title": "feat: 希望新增全局 跨项目访问的  API key",
+      "current_labels": [
+        "enhancement",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1401,
+      "title": "feat: [Feature Request] 重要记忆自动保鲜 — 防止高价值旧记忆因时间衰减丢失",
+      "current_labels": [
+        "enhancement",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "memos",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1398,
+      "title": "[Bug] autoInstall: false 不生效，install_recommended 路径绕过了配置",
+      "current_labels": [],
+      "classified": {
+        "type": "bug",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": true,
+      "suggested_labels": [
+        "plugin",
+        "ai-task"
+      ]
+    },
+    {
+      "number": 1395,
+      "title": "Scheduler initialized but not processing tasks (uvicorn vs direct call difference)",
+      "current_labels": [],
+      "classified": {
+        "type": "question",
+        "module": "memos",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1391,
+      "title": "fix:",
+      "current_labels": [
+        "bug",
+        "pending",
+        "openclaw-local-plugin"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1390,
+      "title": "feat: python版本能否适配sqlite或者嵌入式数据库这种存储",
+      "current_labels": [
+        "enhancement",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1389,
+      "title": "feat: 求适配minimax",
+      "current_labels": [
+        "enhancement",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "memos",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1387,
+      "title": "[Feature/Integration] Behavioral drift monitoring at memory consolidation boundaries",
+      "current_labels": [],
+      "classified": {
+        "type": "question",
+        "module": "plugin",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1384,
+      "title": "feat: 建议你们做个官方插件安装技能skill，可以参考你们的竞品 https://mem9.ai 的安装方式，一句话让任何小龙虾自己安装你们的记忆插件。",
+      "current_labels": [
+        "enhancement",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1383,
+      "title": "[Bug] Multi-Agent mode: cross-agent memory injection + recursive chunk duplication (65908 records in 1 week)",
+      "current_labels": [
+        "bug",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1382,
+      "title": "[Feature Request] 知识库 List 接口 - list knowledgebases / list kb documents",
+      "current_labels": [
+        "bug",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "memos",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "memos"
+      ]
+    },
+    {
+      "number": 1381,
+      "title": "新版本本地local模式插件不兼容，会导致gateway服务不停的down掉，禁掉插件后正常",
+      "current_labels": [
+        "bug",
+        "pending"
+      ],
+      "classified": {
+        "type": "enhancement",
+        "module": "plugin",
+        "priority": "P2:normal"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    },
+    {
+      "number": 1380,
+      "title": "Skill 自动生成：evaluator 评估过于宽松，导致低复用任务也被生成 skill",
+      "current_labels": [],
+      "classified": {
+        "type": "question",
+        "module": "plugin",
+        "priority": "P3:nice-to-have"
+      },
+      "ai_task": false,
+      "suggested_labels": [
+        "plugin"
+      ]
+    }
+  ]
+}

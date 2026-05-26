@@ -9,23 +9,34 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    anthropic_api_key: str = ""
+    # LLM (OpenAI-compatible relay)
+    openai_api_key: str = ""
+    openai_base_url: str = "https://api-int.memtensor.cn/v1"
+    light_model: str = "claude-haiku-4-5-20251001-thinking"
+    heavy_model: str = "claude-opus-4-6-thinking"
+
     langsmith_api_key: str = ""
     langsmith_project: str = "memos-sentinel"
 
+    # GitHub
+    github_token: str = ""
     github_app_id: str = ""
     github_app_private_key_path: str = "./keys/github-app.pem"
     github_webhook_secret: str = ""
     github_target_repo: str = "MemTensor/MemOS"
 
+    # DingTalk
     dingtalk_webhook_url: str = ""
     dingtalk_secret: str = ""
 
+    # Web
     web_base_url: str = "http://localhost:8000"
     web_secret_key: str = "change-me"
 
+    # Database
     database_url: str = "sqlite+aiosqlite:///./data/sentinel.db"
 
+    # Agent behavior
     dry_run: bool = True
     max_dev_retries: int = 2
     concurrency_limit: int = 3

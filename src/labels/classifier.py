@@ -60,54 +60,78 @@ async def classify_issue(issue: dict) -> list[str]:
 
 
 def _classify_type(text: str) -> str | None:
-    """Rule-based type classification."""
-    type_rules = {
-        "bug": ["bug", "fix", "crash", "error", "broken", "fail", "issue", "wrong"],
-        "enhancement": ["feat", "add", "support", "request", "improve", "enhance"],
-        "documentation": ["doc", "readme", "typo", "translate", "wiki"],
-        "question": ["how to", "question", "help", "what is", "why does"],
-        "performance": ["slow", "perf", "timeout", "latency", "memory leak"],
-        "security": ["security", "vulnerability", "cve", "auth bypass"],
-        "regression": ["regression", "broke", "worked before", "downgrade"],
-    }
+    """Rule-based type classification.
 
-    for label, keywords in type_rules.items():
-        if any(kw in text for kw in keywords):
-            return label
+    Order matters — more specific types checked first to avoid
+    'fix' in title catching everything as 'bug'.
+    """
+    # Check regression first (most specific)
+    if any(kw in text for kw in ("regression", "worked before", "downgrade")):
+        return "regression"
+
+    if any(kw in text for kw in ("security", "vulnerability", "cve", "auth bypass")):
+        return "security"
+
+    # Documentation
+    if any(kw in text for kw in ("translate", "typo", "readme", "api docs")):
+        return "documentation"
+
+    # Questions / discussions
+    if any(kw in text for kw in ("discussion", "how should", "question", "feedback")):
+        return "question"
+
+    # Performance
+    if any(kw in text for kw in ("slow", "perf", "timeout", "latency", "memory leak", "100% cpu", "too slow")):
+        return "performance"
+
+    # Enhancement — check BEFORE bug, because "feat:" and "feature request" are explicit
+    if any(kw in text for kw in ("feat:", "feature request", "feature/", "enhancement", "希望", "建议", "能否", "support")):
+        return "enhancement"
+
+    # Bug — "fix:" prefix, explicit "bug", crash/error signals
+    if any(kw in text for kw in ("bug", "crash", "broken", "fail", "error", "breaks", "not working", "not found", "mismatch")):
+        return "bug"
+    # "fix:" in title strongly implies bug
+    if "fix:" in text or "fix(" in text:
+        return "bug"
+
+    # Refactor
+    if any(kw in text for kw in ("refactor", "remove dead", "cleanup")):
+        return "enhancement"
+
     return None
 
 
 def _classify_module(text: str) -> str | None:
-    """Rule-based module classification (4 modules only).
+    """Rule-based module classification (2 modules).
 
     Simplified system:
-    - mod:plugin → all plugin/adapter/bridge code
-    - mod:memos  → core memos logic (memory, MCP, hub, schema, scheduler)
-    - mod:docs   → documentation
-    - mod:infra  → CI/CD, docker, deployment
+    - plugin → everything under apps/ (plugin, adapter, bridge, hermes, openclaw, openwork, viewer)
+    - memos  → everything else (core memory, MCP, scheduler, API, etc.)
     """
-    module_rules = {
-        "mod:plugin": [
-            "plugin", "bridge", "viewer", "install.sh", "adapter",
-            "hermes", "openclaw", "openwork", "electron", "cloud plugin",
-        ],
-        "mod:memos": [
-            "memory", "recall", "scheduler", "mcp", "search_memory",
-            "hub", "sharing", "schema", "model", "interface",
-            "evaluation", "benchmark", "database", "sqlite", "neo4j", "qdrant",
-        ],
-        "mod:docs": [
-            "doc", "readme", "translate", "wiki", "guide", "tutorial",
-        ],
-        "mod:infra": [
-            "ci", "docker", "deploy", "helm", "github action",
-            "workflow", "pipeline", "build", "release",
-        ],
-    }
+    plugin_keywords = [
+        "plugin", "bridge", "viewer", "install.sh", "adapter",
+        "hermes", "openclaw", "openwork", "electron", "cloud plugin",
+        "memos-local", "qclaw", "copaw", "gateway",
+        "openclaw-local", "registertools", "registermemorycapability",
+    ]
 
-    for label, keywords in module_rules.items():
-        if any(kw in text for kw in keywords):
-            return label
+    if any(kw in text for kw in plugin_keywords):
+        return "plugin"
+
+    memos_keywords = [
+        "memory", "recall", "scheduler", "mcp", "search_memory",
+        "hub", "sharing", "schema", "model", "interface",
+        "evaluation", "benchmark", "database", "sqlite", "neo4j", "qdrant",
+        "embedding", "vector", "chunk", "episode", "reward",
+        "dream", "skill", "cube", "product", "knowledge",
+        "docker", "deploy", "ci", "api", "http",
+        "doc", "translate", "readme",
+    ]
+
+    if any(kw in text for kw in memos_keywords):
+        return "memos"
+
     return None
 
 
@@ -135,7 +159,50 @@ async def _llm_classify(
     issue: dict, missing_type: bool = False, missing_module: bool = False
 ) -> list[str]:
     """Fallback: use LLM for classification when rules don't match."""
+    import json as json_mod
     from src.llm.client import get_light_model
 
-    # Placeholder for actual LangChain implementation
-    return []
+    title = issue.get("title", "")
+    body = (issue.get("body") or "")[:1000]
+
+    fields_needed = []
+    if missing_type:
+        fields_needed.append('"type": one of [bug, enhancement, documentation, question, performance, security, regression]')
+    if missing_module:
+        fields_needed.append('"module": one of [plugin, memos]. plugin = anything related to apps/ directory (plugins, adapters, bridge, hermes, openclaw, openwork, viewer, gateway). memos = everything else (core memory, MCP, scheduler, API, database, docs, infra)')
+
+    prompt = f"""Classify this GitHub issue. Respond with ONLY a JSON object.
+
+Title: {title}
+Body: {body[:800]}
+
+Return JSON with these fields:
+{chr(10).join(f"- {f}" for f in fields_needed)}
+
+JSON:"""
+
+    model = get_light_model()
+    try:
+        response = await model.ainvoke(prompt)
+        content = response.content.strip()
+        # Extract JSON from response
+        if "{" in content:
+            json_str = content[content.index("{"):content.rindex("}") + 1]
+            result = json_mod.loads(json_str)
+        else:
+            return []
+
+        labels = []
+        if missing_type and "type" in result:
+            t = result["type"].lower().strip()
+            valid_types = {"bug", "enhancement", "documentation", "question", "performance", "security", "regression"}
+            if t in valid_types:
+                labels.append(t)
+        if missing_module and "module" in result:
+            m = result["module"].lower().strip()
+            if m in ("plugin", "memos"):
+                labels.append(m)
+        return labels
+    except Exception as e:
+        logger.warning(f"LLM classify failed for #{issue.get('number')}: {e}")
+        return []
