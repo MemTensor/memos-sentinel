@@ -43,7 +43,7 @@ async def send_notification(message: str) -> bool:
 
     payload = {
         "msgtype": "text",
-        "text": {"content": f"[Sentinel] {message}"},
+        "text": {"content": f"[MemOS] [Sentinel] {message}"},
     }
 
     try:
