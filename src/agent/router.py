@@ -1,8 +1,7 @@
-"""Router — classifies event complexity and dispatches to appropriate agent path."""
+"""Router — classifies event complexity and dispatches to appropriate handler."""
 
 from __future__ import annotations
 
-import asyncio
 import logging
 
 from src.agent.state import AgentState, get_settings
@@ -12,9 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 async def dispatch_event(event: dict) -> dict:
-    """Entry point: route a GitHub event to the correct agent path."""
-    settings = get_settings()
-
+    """Entry point: route a GitHub event to the correct handler."""
     lock_key = _compute_lock_key(event)
     if lock_key and not await acquire_lock(lock_key):
         logger.warning(f"Skipped duplicate/concurrent event: {lock_key}")
@@ -22,74 +19,144 @@ async def dispatch_event(event: dict) -> dict:
 
     try:
         complexity = classify_complexity(event)
-        state: AgentState = {
-            "event": event,
-            "complexity": complexity,
-            "labels_to_add": [],
-            "labels_to_remove": [],
-            "messages": [],
-            "actions_taken": [],
-            "pending_approval": None,
-            "dev_context": None,
-            "final_summary": "",
-            "error": None,
-            "retry_count": 0,
-            "lock_key": lock_key,
-        }
-
-        if settings.dry_run:
-            logger.info(f"[DRY-RUN] Would dispatch {complexity} for event: {event.get('type')}")
-            return {"summary": f"dry-run: {complexity}", "state": state}
+        logger.info(f"Routed event as: {complexity}")
 
         match complexity:
             case "fast":
-                from src.agent.fast_path import run_fast_path
-                return await run_fast_path(state)
-            case "light":
-                from src.agent.light_agent import run_light_agent
-                return await run_light_agent(state)
-            case "full":
-                from src.agent.full_agent import run_full_agent
-                return await run_full_agent(state)
+                return await _handle_fast(event)
+            case "classify":
+                return await _handle_new_issue(event)
+            case "pr_review":
+                return await _handle_pr(event)
             case "dev":
-                from src.agent.dev_agent import run_dev_agent
-                return await run_dev_agent(state)
+                return await _handle_ai_task(event)
+            case "ignore":
+                return {"summary": "ignored"}
             case _:
-                return {"summary": f"unknown complexity: {complexity}"}
+                return {"summary": f"unhandled: {complexity}"}
+    except Exception as e:
+        logger.error(f"Error processing event: {e}", exc_info=True)
+        return {"summary": f"error: {e}"}
     finally:
         if lock_key:
             await release_lock(lock_key)
 
 
 def classify_complexity(event: dict) -> str:
-    """Four-tier routing based on event type and context."""
+    """Route events to handlers."""
     event_type = event.get("type", "")
     action = event.get("action", "")
     payload = event.get("payload", {})
 
-    # ai-task label → dev path
+    # ai-task label added → dev path
     if event_type == "issues" and action == "labeled":
         label_name = payload.get("label", {}).get("name", "")
         if label_name == "ai-task":
             return "dev"
 
-    # PR opened/synchronized → full review
-    if event_type == "pull_request" and action in ("opened", "synchronize"):
-        return "full"
-
-    # Issue opened → light classification
+    # New issue → classify and label
     if event_type == "issues" and action == "opened":
-        return "light"
+        return "classify"
 
-    # Issue comment → light reply
-    if event_type == "issue_comment" and action == "created":
-        return "light"
+    # PR opened or updated → review
+    if event_type == "pull_request" and action in ("opened", "synchronize"):
+        return "pr_review"
 
-    # Stale/docs-only → fast path
+    # Issue closed/deleted → fast (no-op for now)
     if event_type == "issues" and action in ("closed", "deleted"):
         return "fast"
 
-    return "light"
+    # Ping event
+    if event_type == "ping":
+        return "fast"
+
+    return "ignore"
+
+
+async def _handle_fast(event: dict) -> dict:
+    """Handle simple events that don't need processing."""
+    return {"summary": "fast: acknowledged"}
+
+
+async def _handle_new_issue(event: dict) -> dict:
+    """Handle new issue: classify → label → decide ai-task or notify human."""
+    from src.labels.classifier import _classify_type, _classify_module, _classify_priority, _llm_classify
+    from src.tools.github_write import add_labels
+    from src.agent.notify_handler import notify_needs_human
+    from src.phase1 import _llm_ai_task_judge
+
+    payload = event.get("payload", {})
+    issue = payload.get("issue", {})
+    number = issue.get("number")
+    title = issue.get("title", "")
+    body = issue.get("body", "") or ""
+    text = f"{title} {body}".lower()
+
+    # Classify
+    type_label = _classify_type(text)
+    module_label = _classify_module(text)
+
+    # LLM fallback
+    if not type_label or not module_label:
+        llm_labels = await _llm_classify(issue, missing_type=not type_label, missing_module=not module_label)
+        for l in llm_labels:
+            if l in ("plugin", "memos") and not module_label:
+                module_label = l
+            elif not type_label:
+                type_label = l
+
+    priority_label = _classify_priority(text, type_label, module_label)
+
+    # Apply module label
+    labels_to_add = []
+    if module_label:
+        labels_to_add.append(module_label)
+
+    # Decide: ai-task or notify human
+    can_ai_fix = await _llm_ai_task_judge(issue)
+
+    if can_ai_fix:
+        labels_to_add.append("ai-task")
+    else:
+        reason_key = type_label if type_label in ("question", "enhancement", "performance") else "vague_bug"
+        await notify_needs_human(number, title, module_label, priority_label, reason_key)
+
+    if labels_to_add:
+        await add_labels(number, labels_to_add)
+
+    return {
+        "summary": f"classified #{number}: {module_label}/{type_label}, ai-task={can_ai_fix}",
+        "labels_added": labels_to_add,
+    }
+
+
+async def _handle_pr(event: dict) -> dict:
+    """Handle new/updated PR: review with Opus."""
+    from src.agent.full_agent import review_pr
+
+    payload = event.get("payload", {})
+    pr = payload.get("pull_request", {})
+    number = pr.get("number")
+
+    result = await review_pr(number)
+    return {"summary": f"reviewed PR #{number}", **result}
+
+
+async def _handle_ai_task(event: dict) -> dict:
+    """Handle ai-task trigger: launch dev agent."""
+    from src.agent.dev_agent import run_dev_agent_for_issue
+
+    payload = event.get("payload", {})
+    issue = payload.get("issue", {})
+    number = issue.get("number")
+
+    # Don't process if already ai-reviewing
+    current_labels = [l["name"] for l in issue.get("labels", [])]
+    if "ai-reviewing" in current_labels:
+        return {"summary": f"#{number} already being processed"}
+
+    result = await run_dev_agent_for_issue(number)
+    return {"summary": f"dev-agent processed #{number}", **result}
 
 
 def _compute_lock_key(event: dict) -> str | None:

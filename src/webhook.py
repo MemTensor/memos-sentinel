@@ -7,15 +7,13 @@ import logging
 from fastapi import APIRouter, Header, HTTPException, Request
 
 from src.agent.router import dispatch_event
-from src.store.db import get_session
-from src.store.models import AuditLog
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
 def verify_signature(payload: bytes, signature: str, secret: str) -> bool:
-    expected = "sha256=" + hmac.new(
+    expected = "sha256=" + hmac.HMAC(
         secret.encode(), payload, hashlib.sha256
     ).hexdigest()
     return hmac.compare_digest(expected, signature)
@@ -40,31 +38,19 @@ async def github_webhook(
             raise HTTPException(status_code=401, detail="Invalid signature")
 
     event_data = await request.json()
+
+    # Ignore bot's own actions to prevent loops
+    sender = event_data.get("sender", {}).get("login", "")
+    if sender in ("memos-sentinel[bot]", "Memtensor-AI"):
+        return {"status": "skipped", "reason": "self-event"}
+
     event = {
         "type": x_github_event,
         "action": event_data.get("action"),
         "payload": event_data,
     }
 
-    logger.info(f"Received webhook: {x_github_event}/{event_data.get('action')}")
+    logger.info(f"Webhook: {x_github_event}/{event_data.get('action')} from {sender}")
 
     result = await dispatch_event(event)
-
-    async with get_session() as session:
-        log = AuditLog(
-            event_type=x_github_event,
-            event_action=event_data.get("action"),
-            target_number=_extract_number(event_data),
-            result_summary=result.get("summary", ""),
-        )
-        session.add(log)
-        await session.commit()
-
     return {"status": "processed", "result": result}
-
-
-def _extract_number(event_data: dict) -> int | None:
-    for key in ("issue", "pull_request"):
-        if key in event_data:
-            return event_data[key].get("number")
-    return None

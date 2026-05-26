@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
-import base64
-import time
 import logging
+import time
 import urllib.parse
 
 import httpx
@@ -20,7 +20,7 @@ def _sign(secret: str) -> tuple[str, str]:
     """Generate DingTalk signature."""
     timestamp = str(round(time.time() * 1000))
     string_to_sign = f"{timestamp}\n{secret}"
-    hmac_code = hmac.new(
+    hmac_code = hmac.HMAC(
         secret.encode("utf-8"),
         string_to_sign.encode("utf-8"),
         digestmod=hashlib.sha256,
@@ -46,51 +46,17 @@ async def send_notification(message: str) -> bool:
         "text": {"content": f"[Sentinel] {message}"},
     }
 
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(url, json=payload, timeout=10)
-        if resp.status_code == 200:
-            return True
-        logger.error(f"DingTalk send failed: {resp.status_code} {resp.text}")
-        return False
-
-
-async def send_approval_request(
-    action: str,
-    target: int | str,
-    details: str,
-    confirm_url: str,
-) -> bool:
-    """Send an approval request notification with action link."""
-    settings = get_settings()
-    if not settings.dingtalk_webhook_url:
-        return False
-
-    url = settings.dingtalk_webhook_url
-    if settings.dingtalk_secret:
-        timestamp, sign = _sign(settings.dingtalk_secret)
-        url += f"&timestamp={timestamp}&sign={sign}"
-
-    payload = {
-        "msgtype": "actionCard",
-        "actionCard": {
-            "title": f"Sentinel: Approval needed — {action}",
-            "text": (
-                f"### Action: {action}\n\n"
-                f"**Target:** #{target}\n\n"
-                f"**Details:** {details}\n\n"
-                f"Please review and approve/reject."
-            ),
-            "btnOrientation": "1",
-            "btns": [
-                {"title": "Approve", "actionURL": f"{confirm_url}?action=approve"},
-                {"title": "Reject", "actionURL": f"{confirm_url}?action=reject"},
-            ],
-        },
-    }
-
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(url, json=payload, timeout=10)
-        if resp.status_code == 200:
-            return True
-        logger.error(f"DingTalk approval request failed: {resp.status_code}")
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(url, json=payload)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("errcode") == 0:
+                    return True
+                logger.error(f"DingTalk API error: {data}")
+                return False
+            logger.error(f"DingTalk HTTP error: {resp.status_code}")
+            return False
+    except Exception as e:
+        logger.error(f"DingTalk send failed: {e}")
         return False

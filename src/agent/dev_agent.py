@@ -1,196 +1,286 @@
-"""Dev Agent — ai-task triggered development flow with CI retry logic."""
+"""Dev Agent — ai-task triggered: analyze issue, write fix, create PR."""
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from src.agent.state import AgentState, DevContext, get_settings
-from src.agent.retry import with_retry, RetryExhausted
+import shutil
+import tempfile
+from pathlib import Path
+
+from src.agent.state import get_settings
+from src.agent.notify_handler import notify_ai_task_started, notify_pr_ready, notify_ci_failed
 
 logger = logging.getLogger(__name__)
 
-MAX_STEPS = 15
+SANDBOX_BASE = Path("/tmp/sentinel-runs")
 
 
-async def run_dev_agent(state: AgentState) -> dict:
-    """Full development flow: analyze → fix → PR → CI → retry."""
+async def run_dev_agent_for_issue(issue_number: int) -> dict:
+    """Full dev flow: analyze → fix → PR → CI check."""
+    from src.tools.github_read import read_issue, search_code, read_file
+    from src.tools.github_write import add_labels, remove_labels, post_comment
     from src.llm.client import get_heavy_model
-    from src.tools.github_read import read_issue, read_file, search_code
-    from src.tools.github_dev import (
-        create_branch,
-        edit_file,
-        commit_and_push,
-        create_pull_request,
-        trigger_ci,
-    )
-    from src.tools.github_write import post_comment, add_labels, remove_labels
 
     settings = get_settings()
-    event = state["event"]
-    payload = event.get("payload", {})
-    issue = payload.get("issue", {})
-    issue_number = issue.get("number")
 
-    if not issue_number:
-        return {"summary": "dev-agent: no issue number"}
+    # Mark as in-progress
+    try:
+        await add_labels(issue_number, ["ai-reviewing"])
+        await remove_labels(issue_number, ["ai-task"])
+    except Exception:
+        pass
 
-    actions = []
+    await notify_ai_task_started(issue_number, f"Issue #{issue_number}")
 
     # Step 1: Read issue details
-    issue_detail = await read_issue(issue_number)
-    await add_labels(issue_number, ["ai-reviewing"])
-    await remove_labels(issue_number, ["ai-task"])
+    issue = await read_issue(issue_number)
+    title = issue.get("title", "")
+    body = issue.get("body", "") or ""
 
-    # Step 2: Analyze and locate relevant code
+    # Step 2: Analyze with Opus — determine what to fix
     model = get_heavy_model()
-    analysis = await _analyze_issue(model, issue_detail)
+    analysis = await _analyze_issue(model, title, body)
 
-    # Step 3: Create branch
+    if not analysis.get("can_fix"):
+        await post_comment(issue_number, (
+            "## Sentinel Analysis\n\n"
+            f"After analyzing this issue, I've determined it requires human intervention.\n\n"
+            f"**Reason:** {analysis.get('reason', 'Complex fix beyond automated scope')}\n\n"
+            "Removing `ai-reviewing` label.\n\n"
+            "---\n*Analyzed by [memos-sentinel](https://github.com/MemTensor/memos-sentinel)*"
+        ))
+        await remove_labels(issue_number, ["ai-reviewing"])
+        return {"action": "cannot_fix", "reason": analysis.get("reason")}
+
+    # Step 3: Search for relevant code
+    relevant_files = analysis.get("files_to_check", [])
+    code_context = {}
+    for file_path in relevant_files[:5]:
+        try:
+            content = await read_file(file_path)
+            code_context[file_path] = content[:5000]
+        except Exception:
+            pass
+
+    # Step 4: Generate fix
+    fix = await _generate_fix(model, title, body, code_context, analysis)
+    if not fix.get("changes"):
+        await post_comment(issue_number, (
+            "## Sentinel Analysis\n\n"
+            "I analyzed the issue but could not generate a confident fix.\n"
+            "Needs human attention.\n\n"
+            "---\n*Analyzed by [memos-sentinel](https://github.com/MemTensor/memos-sentinel)*"
+        ))
+        await remove_labels(issue_number, ["ai-reviewing"])
+        return {"action": "no_fix_generated"}
+
+    # Step 5: Create branch and PR via GitHub API
     branch_name = f"{settings.dev_branch_prefix}{issue_number}"
-    base_branch = _determine_base_branch(issue_detail)
-    await create_branch(branch_name, base=base_branch)
+    pr_result = await _create_fix_pr(issue_number, branch_name, fix, title, body, analysis)
 
-    dev_ctx: DevContext = {
-        "issue_number": issue_number,
-        "branch_name": branch_name,
-        "files_modified": [],
-        "pr_number": None,
-        "ci_attempts": 0,
-        "clone_path": "",
-    }
-    state["dev_context"] = dev_ctx
+    if pr_result.get("error"):
+        await post_comment(issue_number, f"Failed to create PR: {pr_result['error']}")
+        await remove_labels(issue_number, ["ai-reviewing"])
+        return {"action": "pr_creation_failed", "error": pr_result["error"]}
 
-    # Step 4: Generate and apply fix
-    fix_result = await _generate_fix(model, analysis)
-    for file_change in fix_result.get("changes", []):
-        await edit_file(file_change["path"], file_change["content"])
-        dev_ctx["files_modified"].append(file_change["path"])
+    pr_number = pr_result.get("number")
+    await post_comment(issue_number, (
+        f"## Sentinel Fix\n\n"
+        f"I've created PR #{pr_number} with a proposed fix.\n\n"
+        f"**Branch:** `{branch_name}`\n"
+        f"**Analysis:** {analysis.get('summary', '')}\n\n"
+        f"Please review the PR and merge if it looks good.\n\n"
+        f"---\n*Fix by [memos-sentinel](https://github.com/MemTensor/memos-sentinel)*"
+    ))
 
-    # Step 5: Commit and push
-    commit_msg = f"fix: {analysis.get('summary', f'resolve #{issue_number}')}"
-    await commit_and_push(commit_msg)
+    await notify_pr_ready(issue_number, pr_number, title)
+    return {"action": "pr_created", "pr_number": pr_number}
 
-    # Step 6: Create Draft PR
-    pr_body = _build_pr_body(issue_number, analysis, fix_result)
-    pr = await create_pull_request(
-        title=f"fix(sentinel): {analysis.get('summary', '')} (#{issue_number})",
-        body=pr_body,
-        base=base_branch,
-        head=branch_name,
-        draft=True,
-    )
-    dev_ctx["pr_number"] = pr.get("number")
-    actions.append({"tool": "create_pr", "pr_number": pr.get("number")})
 
-    # Step 7: Trigger CI with retry
+async def _analyze_issue(model, title: str, body: str) -> dict:
+    """Use Opus to analyze the issue and determine fix strategy."""
+    import json
+
+    prompt = f"""Analyze this GitHub issue and determine if you can write a code fix for it.
+
+Title: {title}
+Body: {body[:3000]}
+
+Respond with JSON:
+{{
+    "can_fix": true/false,
+    "reason": "why or why not",
+    "summary": "one-line summary of the fix needed",
+    "files_to_check": ["list", "of", "file", "paths", "to", "examine"],
+    "fix_approach": "brief description of how to fix"
+}}
+
+Only set can_fix=true if:
+1. The problem is clearly defined
+2. You can identify specific files/functions to change
+3. The fix is straightforward (no major refactoring)"""
+
     try:
-        await _run_ci_with_retry(state, model, settings.max_dev_retries)
-        await post_comment(
-            issue_number,
-            f"Created PR #{dev_ctx['pr_number']} with fix. CI passed. Ready for review.",
-        )
-        from src.notify.dingtalk import send_notification
+        response = await model.ainvoke(prompt)
+        content = response.content
+        if "{" in content:
+            json_str = content[content.index("{"):content.rindex("}") + 1]
+            return json.loads(json_str)
+    except Exception as e:
+        logger.error(f"Analysis failed: {e}")
 
-        await send_notification(
-            f"PR #{dev_ctx['pr_number']} for issue #{issue_number} — CI passed, please review."
-        )
-    except RetryExhausted:
-        await post_comment(
-            issue_number,
-            f"PR #{dev_ctx['pr_number']} created but CI failed after "
-            f"{settings.max_dev_retries} retries. Needs manual intervention.",
-        )
-        from src.notify.dingtalk import send_notification
-
-        await send_notification(
-            f"PR #{dev_ctx['pr_number']} for issue #{issue_number} — CI FAILED, needs human help."
-        )
-
-    state["actions_taken"] = actions
-    state["final_summary"] = f"dev-agent: PR #{dev_ctx['pr_number']} for issue #{issue_number}"
-    return {"summary": state["final_summary"], "actions": actions}
+    return {"can_fix": False, "reason": "Analysis failed"}
 
 
-def _determine_base_branch(issue_detail: dict) -> str:
-    """Determine the correct base branch for the fix.
+async def _generate_fix(model, title: str, body: str, code_context: dict, analysis: dict) -> dict:
+    """Use Opus to generate code changes."""
+    import json
 
-    Strategy:
-    - If issue mentions a specific version/branch → target that branch
-    - If issue is a regression tagged with a release → target release branch
-    - Default → main
-    """
-    settings = get_settings()
-    body = (issue_detail.get("body") or "").lower()
-    labels = [l.get("name", "") for l in issue_detail.get("labels", [])]
+    context_str = ""
+    for path, content in code_context.items():
+        context_str += f"\n### {path}\n```\n{content[:3000]}\n```\n"
 
-    # Check for release branch mentions
-    for label in labels:
-        if label.startswith("v") and "." in label:
-            return f"release/{label}"
+    prompt = f"""Generate a code fix for this issue.
 
-    return settings.default_base_branch
+## Issue
+Title: {title}
+Body: {body[:2000]}
 
+## Analysis
+{analysis.get('fix_approach', '')}
 
-async def _analyze_issue(model, issue_detail: dict) -> dict:
-    """Use LLM to analyze the issue and determine fix strategy."""
-    # Placeholder for LangChain implementation
-    return {"summary": "", "relevant_files": [], "fix_approach": ""}
+## Current Code
+{context_str}
 
+## Instructions
+Generate the fix as a JSON array of file changes:
+{{
+    "changes": [
+        {{
+            "path": "path/to/file.py",
+            "content": "full new file content"
+        }}
+    ],
+    "commit_message": "fix: descriptive commit message"
+}}
 
-async def _generate_fix(model, analysis: dict) -> dict:
-    """Use LLM to generate code changes."""
-    # Placeholder for LangChain implementation
+Only include files that need changes. Provide the COMPLETE new content for each file."""
+
+    try:
+        response = await model.ainvoke(prompt)
+        content = response.content
+        if "{" in content:
+            json_str = content[content.index("{"):content.rindex("}") + 1]
+            return json.loads(json_str)
+    except Exception as e:
+        logger.error(f"Fix generation failed: {e}")
+
     return {"changes": []}
 
 
-async def _run_ci_with_retry(state: AgentState, model, max_retries: int):
-    """Run CI and retry on failure up to max_retries times."""
-    from src.tools.github_dev import trigger_ci
-    from src.tools.github_read import list_pr_checks
-    from src.agent.retry import RetryExhausted
+async def _create_fix_pr(
+    issue_number: int,
+    branch_name: str,
+    fix: dict,
+    title: str,
+    body: str,
+    analysis: dict,
+) -> dict:
+    """Create a branch with fixes and open a Draft PR via GitHub API."""
+    import httpx
+    import base64
 
-    dev_ctx = state["dev_context"]
-    pr_number = dev_ctx["pr_number"]
+    settings = get_settings()
+    repo = settings.github_target_repo
+    headers = {
+        "Authorization": f"Bearer {settings.github_token}",
+        "Accept": "application/vnd.github+json",
+    }
+    api = "https://api.github.com"
 
-    for attempt in range(max_retries + 1):
-        dev_ctx["ci_attempts"] = attempt + 1
-        await trigger_ci(pr_number)
+    async with httpx.AsyncClient(timeout=30) as client:
+        try:
+            # Get main branch SHA
+            ref_resp = await client.get(
+                f"{api}/repos/{repo}/git/ref/heads/{settings.default_base_branch}",
+                headers=headers,
+            )
+            ref_resp.raise_for_status()
+            base_sha = ref_resp.json()["object"]["sha"]
 
-        ci_result = await _wait_for_ci(pr_number)
-        if ci_result.get("passed"):
-            return
+            # Create branch
+            create_ref_resp = await client.post(
+                f"{api}/repos/{repo}/git/refs",
+                headers=headers,
+                json={"ref": f"refs/heads/{branch_name}", "sha": base_sha},
+            )
+            if create_ref_resp.status_code == 422:
+                # Branch exists, get its SHA
+                pass
+            elif create_ref_resp.status_code >= 400:
+                return {"error": f"Failed to create branch: {create_ref_resp.text}"}
 
-        if attempt < max_retries:
-            logger.info(f"CI failed (attempt {attempt + 1}), analyzing and retrying...")
-            fix = await _fix_ci_failure(model, ci_result)
-            if fix:
-                from src.tools.github_dev import edit_file, commit_and_push
+            # Commit each file change
+            for change in fix.get("changes", []):
+                file_path = change["path"]
+                content = change["content"]
+                encoded = base64.b64encode(content.encode()).decode()
 
-                for change in fix.get("changes", []):
-                    await edit_file(change["path"], change["content"])
-                await commit_and_push(f"fix: address CI failure (attempt {attempt + 2})")
+                # Check if file exists
+                existing = await client.get(
+                    f"{api}/repos/{repo}/contents/{file_path}",
+                    headers=headers,
+                    params={"ref": branch_name},
+                )
+                file_sha = None
+                if existing.status_code == 200:
+                    file_sha = existing.json().get("sha")
 
-    raise RetryExhausted(f"CI failed after {max_retries + 1} attempts")
+                put_data = {
+                    "message": fix.get("commit_message", f"fix: resolve #{issue_number}"),
+                    "content": encoded,
+                    "branch": branch_name,
+                }
+                if file_sha:
+                    put_data["sha"] = file_sha
 
+                put_resp = await client.put(
+                    f"{api}/repos/{repo}/contents/{file_path}",
+                    headers=headers,
+                    json=put_data,
+                )
+                if put_resp.status_code >= 400:
+                    return {"error": f"Failed to update {file_path}: {put_resp.text[:200]}"}
 
-async def _wait_for_ci(pr_number: int) -> dict:
-    """Poll CI status until completion."""
-    # Placeholder — will poll GitHub checks API
-    return {"passed": False, "logs": ""}
+            # Create Draft PR
+            pr_body = (
+                f"## Summary\n\n"
+                f"Automated fix for #{issue_number}.\n\n"
+                f"**Analysis:** {analysis.get('summary', 'N/A')}\n\n"
+                f"**Approach:** {analysis.get('fix_approach', 'N/A')}\n\n"
+                f"## Changes\n\n"
+                + "\n".join(f"- `{c['path']}`" for c in fix.get("changes", []))
+                + f"\n\nCloses #{issue_number}\n\n"
+                + "---\n*Generated by [memos-sentinel](https://github.com/MemTensor/memos-sentinel)*"
+            )
 
+            pr_resp = await client.post(
+                f"{api}/repos/{repo}/pulls",
+                headers=headers,
+                json={
+                    "title": f"fix(sentinel): {analysis.get('summary', title)[:60]} (#{issue_number})",
+                    "body": pr_body,
+                    "head": branch_name,
+                    "base": settings.default_base_branch,
+                    "draft": True,
+                },
+            )
+            if pr_resp.status_code >= 400:
+                return {"error": f"Failed to create PR: {pr_resp.text[:200]}"}
 
-async def _fix_ci_failure(model, ci_result: dict) -> dict | None:
-    """Analyze CI failure and generate a fix."""
-    # Placeholder for LangChain implementation
-    return None
+            pr_data = pr_resp.json()
+            return {"number": pr_data["number"], "url": pr_data["html_url"]}
 
-
-def _build_pr_body(issue_number: int, analysis: dict, fix_result: dict) -> str:
-    return (
-        f"## Summary\n\n"
-        f"Automated fix for #{issue_number}.\n\n"
-        f"**Analysis:** {analysis.get('summary', 'N/A')}\n\n"
-        f"**Approach:** {analysis.get('fix_approach', 'N/A')}\n\n"
-        f"## Changes\n\n"
-        + "\n".join(f"- `{c['path']}`" for c in fix_result.get("changes", []))
-        + "\n\n---\n*Generated by memos-sentinel*"
-    )
+        except Exception as e:
+            return {"error": str(e)}
